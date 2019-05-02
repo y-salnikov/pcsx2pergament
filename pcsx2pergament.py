@@ -9,7 +9,7 @@ import configparser
 import os
 import shutil
 import subprocess
-import treding
+
 
 config_file="pcsx2pergament.cfg"
 
