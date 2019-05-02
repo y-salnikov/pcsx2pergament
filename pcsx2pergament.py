@@ -99,7 +99,11 @@ class MyFrame(wx.Frame):
 				else: r=s.lower()
 				if isdir: r="!!!"+r
 				return r.replace(" ","").replace("_","")
-		
+		def check_ini(path_list):
+			g_path=get_games_path_from_config()
+			for p in path_list: g_path=os.path.join(g_path,p)
+			g_path=os.path.join(g_path,os.path.basename(get_inis_path_from_config()))
+			return os.path.exists(g_path)
 		def populate_tree(root,tree_dict,path=[]):
 			global config
 			dir_first=config["Tree"].getboolean("dir_first",fallback=True)
@@ -124,7 +128,7 @@ class MyFrame(wx.Frame):
 						p=path[:]
 						p.append(s)
 						if not files_only:
-							r=self.tree_ctrl_1.AppendItem(root,s,image=0,data=p)
+							r=self.tree_ctrl_1.AppendItem(root,s,image=2 if check_ini(p) else 0 ,data=p)
 						files.append([s,p])
 			return files
 		iso_dict=scan_isos()
@@ -136,14 +140,14 @@ class MyFrame(wx.Frame):
 		if files_only:
 			files.sort(key=lambda x: srt_key(x[0],False,case_sen))
 			for f in files:
-				self.tree_ctrl_1.AppendItem(self.root,f[0],image=0,data=f[1])
+				self.tree_ctrl_1.AppendItem(self.root,f[0],image=2 if check_ini(f[1]) else 0,data=f[1])
 		self.tree_ctrl_1.Expand(self.root)
 	def tree_clicked(self,event):
 		node_data=self.tree_ctrl_1.GetItemData(self.tree_ctrl_1.GetSelection())
 		if node_data is None:
 			self.tree_ctrl_1.Toggle(self.tree_ctrl_1.GetSelection())
 			return
-		games_path=config["Paths"].get("games_dir","Games_inis")
+		games_path=get_games_path_from_config()
 		if os.path.exists(games_path) and os.path.isdir(games_path):
 			pass
 		else:
@@ -158,7 +162,7 @@ class MyFrame(wx.Frame):
 				self.text_ctrl_5.SetDefaultStyle(wx.TextAttr(wx.NullColour))
 				return
 		g_path=games_path
-		iso_path=config["Paths"].get("iso_path","ISO")
+		iso_path=get_iso_path_from_config()
 		for path in node_data:
 			g_path=os.path.join(g_path,path)
 			iso_path=os.path.join(iso_path,path)
@@ -172,7 +176,7 @@ class MyFrame(wx.Frame):
 					self.text_ctrl_5.SetDefaultStyle(wx.TextAttr(wx.RED))
 					self.text_ctrl_5.AppendText(_('Can\'t create "%s" directory.\n' %(g_path)))
 					self.text_ctrl_5.SetDefaultStyle(wx.TextAttr(wx.NullColour))
-		ini_path=config["Paths"].get("inis_path","inis")
+		ini_path=get_inis_path_from_config()
 		ini_dirname=os.path.basename(ini_path)
 		g_ini=os.path.join(g_path,ini_dirname)
 		if (not os.path.exists(g_ini)) or (not os.path.isdir(g_ini)):
@@ -180,7 +184,7 @@ class MyFrame(wx.Frame):
 				self.text_ctrl_5.AppendText(_('The games ini directory doesn\'t exist. Copying default ini directory.\n' ))
 				self.text_ctrl_5.SetDefaultStyle(wx.TextAttr(wx.NullColour))
 				shutil.copytree(ini_path,g_ini)
-		pcsx_exec=config["Paths"].get("exec","./PCSX2-linux.sh")
+		pcsx_exec=get_exec_path_from_config()
 		self.text_ctrl_5.SetDefaultStyle(wx.TextAttr(wx.BLUE))
 		self.text_ctrl_5.AppendText(_('Starting PCSX2...\n' ))
 		self.text_ctrl_5.AppendText(_('%s --cfgpath=%s %s\n' %(pcsx_exec,g_ini,iso_path) ))
@@ -365,10 +369,25 @@ def path_to_dict(path):
         tree.update({f: file_token for f in files})
         return tree  # note we discontinue iteration trough os.walk
 
+def get_iso_path_from_config():
+	global config
+	return config["Paths"].get("iso_path","ISO")
+
+def get_games_path_from_config():
+	global config
+	return config["Paths"].get("games_dir","Games_inis")
+
+def get_inis_path_from_config():
+	global config
+	return config["Paths"].get("inis_path","inis")
+
+def get_exec_path_from_config():
+	global config
+	return config["Paths"].get("exec","./PCSX2-linux.sh")
 
 def scan_isos():
 	global config
-	iso_path=config["Paths"].get("iso_path","ISO")
+	iso_path=get_iso_path_from_config()
 	r=path_to_dict(iso_path)
 	if r is None: return {}
 	return r
@@ -456,10 +475,10 @@ if __name__ == "__main__":
 		win_h=config["Window"].get("height",win_h)
 	else: config["Window"]={"width":win_w,"height":win_h}
 	if "Paths" not in config: config["Paths"]={}
-	ini_path=config["Paths"].get("inis_path","inis")
-	iso_path=config["Paths"].get("iso_path","ISO")
-	pcsx_exec=config["Paths"].get("exec","./PCSX2-linux.sh")
-	games_path=config["Paths"].get("games_dir","Games_inis")
+	ini_path=get_inis_path_from_config()
+	iso_path=get_iso_path_from_config()
+	pcsx_exec=get_exec_path_from_config()
+	games_path=get_games_path_from_config()
 	if "Tree" not in config: config["Tree"]={}
 	dir_first=config["Tree"].getboolean("dir_first",fallback=True)
 	files_only=config["Tree"].getboolean("files_only",fallback=False)
